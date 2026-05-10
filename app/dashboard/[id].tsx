@@ -97,13 +97,18 @@ function probabilityColor(p: ConditionProbability): {
 function Card({
   title,
   children,
+  headerRight,
 }: {
   title: string;
   children: React.ReactNode;
+  headerRight?: React.ReactNode;
 }) {
   return (
     <View style={styles.card}>
-      <Text style={styles.cardTitle}>{title}</Text>
+      <View style={styles.cardHeader}>
+        <Text style={styles.cardTitle}>{title}</Text>
+        {headerRight}
+      </View>
       <View style={styles.cardBody}>{children}</View>
     </View>
   );
@@ -380,7 +385,31 @@ export default function PatientDetailScreen() {
                 </View>
               </Card>
 
-              <Card title="Status update">
+              <Card
+                title="Status update"
+                headerRight={
+                  triage.status !== 'waiting' ? (
+                    <Pressable
+                      onPress={() => {
+                        void handleUpdate('waiting');
+                      }}
+                      disabled={busyAction === 'waiting'}
+                      hitSlop={8}
+                      style={({ pressed }) => [
+                        styles.resetBtn,
+                        pressed && styles.resetBtnPressed,
+                        busyAction === 'waiting' && styles.actionBtnDisabled,
+                      ]}
+                    >
+                      {busyAction === 'waiting' ? (
+                        <ActivityIndicator color={C.textSecondary} size="small" />
+                      ) : (
+                        <Text style={styles.resetBtnText}>↺ Reset</Text>
+                      )}
+                    </Pressable>
+                  ) : null
+                }
+              >
                 <View style={styles.actionsCol}>
                   <StatusButton
                     label="Call in patient"
@@ -551,11 +580,33 @@ const styles = StyleSheet.create({
     borderColor: C.border,
     padding: 16,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    gap: 8,
+  },
   cardTitle: {
     fontSize: 15,
     fontWeight: '700',
     color: C.textPrimary,
-    marginBottom: 10,
+  },
+  resetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.background,
+  },
+  resetBtnPressed: { opacity: 0.6 },
+  resetBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.textSecondary,
   },
   cardBody: { gap: 6 },
   tierRow: {
