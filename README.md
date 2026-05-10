@@ -6,6 +6,21 @@ A mobile-first ER triage app that replaces the waiting room's "first come, first
 
 ---
 
+<img width="501" height="756" alt="image" src="https://github.com/user-attachments/assets/d0bd0544-7273-4aab-a395-99bf9f3bb3e5" />
+<img width="585" height="1266" alt="IMG_3176" src="https://github.com/user-attachments/assets/0a523088-ff59-4a2a-8e54-2c14df9f343b" />
+<img width="585" height="1266" alt="IMG_3181" src="https://github.com/user-attachments/assets/3dda2fbc-66c3-4921-96a2-ffd7e8f43e8c" />
+<img width="585" height="1266" alt="IMG_3183" src="https://github.com/user-attachments/assets/3f852dd3-40c6-40ac-bed7-b7bd759de63f" />
+<img width="585" height="1266" alt="IMG_3184" src="https://github.com/user-attachments/assets/1f69b1a2-ea28-411d-9e30-2a6505321185" />
+<img width="1919" height="857" alt="image" src="https://github.com/user-attachments/assets/828f0326-77ed-44b9-9b40-0e11b9069a56" />
+<img width="1918" height="858" alt="image" src="https://github.com/user-attachments/assets/65fcb68c-3042-4e5e-9f74-31f95599de8e" />
+
+
+---
+
+* More images at bottom
+
+---
+
 ## The problem
 
 Walk-in ERs use a single FIFO queue. A patient with crushing chest pain joins the same line as a patient with a rash. Triage nurses re-rank manually, but they're the bottleneck — and patients wait blind, with no sense of why someone who arrived after them is being seen first.
@@ -146,3 +161,15 @@ Apply the schema once in the Supabase SQL editor (`database/database.sql`).
 ## Status
 
 Hackathon MVP. Working: intake → triage → queue → detail → status workflow, health card OCR, AI summary. In progress: authentication / role-based access, structured post-visit records.
+
+---
+
+<img width="585" height="1266" alt="IMG_3187" src="https://github.com/user-attachments/assets/aa872af9-bdec-4ae9-9055-b58090c54b92" />
+<img width="585" height="1266" alt="IMG_3186" src="https://github.com/user-attachments/assets/b22400f1-dffe-40c1-84fc-3d081266cbd3" />
+<img width="585" height="1266" alt="IMG_3185" src="https://github.com/user-attachments/assets/9a474042-cfde-42fd-817c-89711435821d" />
+<img width="585" height="1266" alt="IMG_3182" src="https://github.com/user-attachments/assets/f3db03d3-e574-40a3-9f86-ea89f3169047" />
+<img width="585" height="1266" alt="IMG_3180" src="https://github.com/user-attachments/assets/3e8a998c-07a4-498a-a7f1-d6163996f66e" />
+<img width="585" height="1266" alt="IMG_3179" src="https://github.com/user-attachments/assets/8b25c425-87a6-49ae-b0b8-3ed104c00098" />
+<img width="585" height="1266" alt="IMG_3178" src="https://github.com/user-attachments/assets/8ba797c4-2567-4071-8d97-d05e9ce70702" />
+<img width="585" height="1266" alt="IMG_3177" src="https://github.com/user-attachments/assets/e8ae5824-cd52-408d-a389-6781e8710643" />
+<img width="1919" height="855" alt="image" src="https://github.com/user-attachments/assets/92c2c04f-267b-430e-830a-29fc9efa1958" />
