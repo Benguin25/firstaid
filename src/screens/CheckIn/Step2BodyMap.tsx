@@ -61,7 +61,10 @@ export default function Step2BodyMap() {
         </Pressable>
       </View>
 
-      <View style={{ height: 420, width: '100%' }} className="items-center">
+      <View
+        style={{ width: '100%', aspectRatio: 200 / 440 }}
+        className="items-center self-center"
+      >
         <BodySilhouette
           view={view}
           selected={data.bodyRegions}

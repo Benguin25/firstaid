@@ -2,28 +2,11 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import { StepLayout } from './components/StepLayout';
 import { useCheckIn } from './CheckInContext';
 
-type Tier = { bg: string; light: string; ring: string };
-
-const colorFor = (n: number): Tier => {
-  if (n <= 3)
-    return { bg: '#22c55e', light: '#dcfce7', ring: 'rgba(34,197,94,0.35)' };
-  if (n <= 6)
-    return { bg: '#f59e0b', light: '#fef3c7', ring: 'rgba(245,158,11,0.35)' };
-  return { bg: '#ef4444', light: '#fee2e2', ring: 'rgba(239,68,68,0.35)' };
-};
-
 const labelFor = (n: number | null) => {
   if (n == null) return '';
   if (n <= 3) return 'Mild discomfort';
   if (n <= 6) return 'Moderate pain';
   return 'Severe pain';
-};
-
-const labelColor = (n: number | null) => {
-  if (n == null) return '#475569';
-  if (n <= 3) return '#15803d';
-  if (n <= 6) return '#b45309';
-  return '#b91c1c';
 };
 
 export default function Step5PainScale() {
@@ -44,7 +27,6 @@ export default function Step5PainScale() {
         style={{ gap: 12 }}
       >
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
-          const c = colorFor(n);
           const sel = data.painLevel === n;
           return (
             <Pressable
@@ -54,16 +36,16 @@ export default function Step5PainScale() {
                 width: 56,
                 height: 56,
                 borderRadius: 28,
-                backgroundColor: sel ? c.bg : c.light,
+                backgroundColor: sel ? '#1D9E75' : '#f1f5f9',
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderWidth: sel ? 0 : 1,
-                borderColor: c.ring,
+                borderColor: '#e2e8f0',
               }}
             >
               <Text
                 style={{
-                  color: sel ? '#ffffff' : c.bg,
+                  color: sel ? '#ffffff' : '#334155',
                   fontSize: 18,
                   fontWeight: '700',
                 }}
@@ -77,10 +59,7 @@ export default function Step5PainScale() {
 
       <View className="items-center mt-5 min-h-7">
         {data.painLevel != null && (
-          <Text
-            style={{ color: labelColor(data.painLevel) }}
-            className="text-base font-semibold"
-          >
+          <Text className="text-base font-semibold text-slate-700">
             {labelFor(data.painLevel)}
           </Text>
         )}

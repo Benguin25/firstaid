@@ -10,13 +10,31 @@ export type Pattern = 'constant' | 'comes_and_goes' | 'getting_worse';
 
 export type BodyRegion =
   | 'head'
+  | 'neck'
   | 'chest'
-  | 'left_arm'
-  | 'right_arm'
   | 'abdomen'
-  | 'left_leg'
-  | 'right_leg'
-  | 'back';
+  | 'upper_back'
+  | 'lower_back'
+  | 'left_shoulder'
+  | 'right_shoulder'
+  | 'left_upper_arm'
+  | 'right_upper_arm'
+  | 'left_elbow'
+  | 'right_elbow'
+  | 'left_forearm'
+  | 'right_forearm'
+  | 'left_wrist'
+  | 'right_wrist'
+  | 'left_hand'
+  | 'right_hand'
+  | 'left_thigh'
+  | 'right_thigh'
+  | 'left_knee'
+  | 'right_knee'
+  | 'left_lower_leg'
+  | 'right_lower_leg'
+  | 'left_foot'
+  | 'right_foot';
 
 export type DOB = { day: string; month: string; year: string };
 
@@ -111,11 +129,29 @@ export const PATTERN_OPTIONS: { value: Pattern; label: string }[] = [
 
 export const REGION_LABEL: Record<BodyRegion, string> = {
   head: 'Head',
+  neck: 'Neck',
   chest: 'Chest',
-  left_arm: 'Left arm',
-  right_arm: 'Right arm',
   abdomen: 'Abdomen',
-  left_leg: 'Left leg',
-  right_leg: 'Right leg',
-  back: 'Back',
+  upper_back: 'Upper back',
+  lower_back: 'Lower back',
+  left_shoulder: 'Left shoulder',
+  right_shoulder: 'Right shoulder',
+  left_upper_arm: 'Left upper arm',
+  right_upper_arm: 'Right upper arm',
+  left_elbow: 'Left elbow',
+  right_elbow: 'Right elbow',
+  left_forearm: 'Left forearm',
+  right_forearm: 'Right forearm',
+  left_wrist: 'Left wrist',
+  right_wrist: 'Right wrist',
+  left_hand: 'Left hand',
+  right_hand: 'Right hand',
+  left_thigh: 'Left thigh',
+  right_thigh: 'Right thigh',
+  left_knee: 'Left knee',
+  right_knee: 'Right knee',
+  left_lower_leg: 'Left lower leg',
+  right_lower_leg: 'Right lower leg',
+  left_foot: 'Left foot',
+  right_foot: 'Right foot',
 };
