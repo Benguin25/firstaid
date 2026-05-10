@@ -23,6 +23,62 @@ import { StepLayout } from './components/StepLayout';
 const SINGLE_DELAY_MS = 400;
 const SCALE_DELAY_MS = 300;
 
+// Map body part keys to chief complaint option IDs
+const BODY_PART_TO_CHIEF_OPTIONS: Record<string, string[]> = {
+  '2':  ['g'],           // Head → Neurological
+  '1':  ['l'],           // Maxillofacial → ENT
+  '3':  ['l', 'g'],      // Neck → ENT, Neurological
+  '19': ['g'],           // Skull/Brain → Neurological
+  '4':  ['a', 'b', 'c'], // Chest → Cardiovascular, Respiratory, Pain
+  '20': ['m', 'd'],      // Right Shoulder → Musculoskeletal, Trauma
+  '26': ['m', 'd'],      // Left Shoulder → Musculoskeletal, Trauma
+  '32': ['m', 'd'],      // Right Humerus → Musculoskeletal, Trauma
+  '40': ['m', 'd'],      // Left Humerus → Musculoskeletal, Trauma
+  '22': ['m', 'd'],      // Right Elbow → Musculoskeletal, Trauma
+  '29': ['m', 'd'],      // Left Elbow → Musculoskeletal, Trauma
+  '23': ['m', 'd'],      // Right Forearm → Musculoskeletal, Trauma
+  '28': ['m', 'd'],      // Left Forearm → Musculoskeletal, Trauma
+  '24': ['m', 'd'],      // Right Wrist → Musculoskeletal, Trauma
+  '31': ['m', 'd'],      // Left Wrist → Musculoskeletal, Trauma
+  '25': ['m', 'd'],      // Right Hand → Musculoskeletal, Trauma
+  '30': ['m', 'd'],      // Left Hand → Musculoskeletal, Trauma
+  '10': ['f', 'c'],      // Abdominal → Gastrointestinal, Pain
+  '9':  ['f', 'k'],      // Pelvis → Gastrointestinal, Reproductive
+  '14': ['m', 'k'],      // Left Hip → Musculoskeletal, Reproductive
+  '15': ['m'],           // Right Hip → Musculoskeletal
+  '27': ['m', 'd'],      // Left Femur/Thigh → Musculoskeletal, Trauma
+  '21': ['m', 'd'],      // Right Femur/Thigh → Musculoskeletal, Trauma
+  '39': ['m', 'd'],      // Left Knee → Musculoskeletal, Trauma
+  '33': ['m', 'd'],      // Right Knee → Musculoskeletal, Trauma
+  '38': ['m', 'd'],      // Left Tib/Fib → Musculoskeletal, Trauma
+  '34': ['m', 'd'],      // Right Tib/Fib → Musculoskeletal, Trauma
+  '42': ['m', 'd'],      // Left Ankle → Musculoskeletal, Trauma
+  '35': ['m', 'd'],      // Right Ankle → Musculoskeletal, Trauma
+  '37': ['m', 'd'],      // Left Foot → Musculoskeletal, Trauma
+  '36': ['m', 'd'],      // Right Foot → Musculoskeletal, Trauma
+  '41': ['m', 'd', 'c'], // Spine → Musculoskeletal, Trauma, Pain
+  '5':  ['m', 'd', 'c'], // Back → Musculoskeletal, Trauma, Pain
+  '16': ['f', 'm'],      // Buttocks → Gastrointestinal, Musculoskeletal
+  '17': ['m', 'd'],      // Right Shoulder (Back) → Musculoskeletal, Trauma
+  '18': ['m', 'd'],      // Left Shoulder (Back) → Musculoskeletal, Trauma
+  '11': ['m', 'd'],      // Right Arm (Back) → Musculoskeletal, Trauma
+  '8':  ['m', 'd'],      // Left Arm (Back) → Musculoskeletal, Trauma
+  '7':  ['m', 'd'],      // Right Leg (Back) → Musculoskeletal, Trauma
+  '12': ['m', 'd'],      // Left Leg (Back) → Musculoskeletal, Trauma
+};
+
+// Filter chief complaint options based on body map selections
+function getRelevantChiefOptions(bodyMap: string[]): Set<string> {
+  const relevant = new Set<string>();
+  for (const key of bodyMap) {
+    const optIds = BODY_PART_TO_CHIEF_OPTIONS[key] ?? [];
+    optIds.forEach(id => relevant.add(id));
+  }
+  // Always include 'o' (Other / not sure) as escape hatch
+  relevant.add('o');
+  return relevant;
+}
+
 function toSelected(options: QuestionOption[]): SelectedOption[] {
   return options.map((o) => ({ id: o.id, label: o.label, weight: o.weight }));
 }
@@ -37,7 +93,7 @@ export function StepSymptoms() {
     finishTriage,
     resetTriage,
   } = useOnboarding();
-  const { triage } = state;
+  const { triage, bodyMap } = state;
 
   const chiefQuestion = useMemo(() => getChiefComplaintQuestion(), []);
 
@@ -57,7 +113,6 @@ export function StepSymptoms() {
     };
   }, []);
 
-  // If user returns to step 3 mid-flow, sync the local current question.
   useEffect(() => {
     if (!current && !triage.finished) {
       setCurrent(initialQuestion);
@@ -65,9 +120,9 @@ export function StepSymptoms() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuestion]);
 
-  // Auto-advance to step 4 once triage finishes.
+  // Auto-advance to step 5 once triage finishes (was step 4, shifted by body map)
   useEffect(() => {
-    if (triage.finished) setStep(4);
+    if (triage.finished) setStep(5);
   }, [triage.finished, setStep]);
 
   const recordAnswer = (q: Question, picked: QuestionOption[]) => {
@@ -159,10 +214,10 @@ export function StepSymptoms() {
   const onBack = () => {
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
     if (triage.asked.length === 0) {
-      setStep(2);
+      // Go back to body map (step 3), not measurements (step 2)
+      setStep(3);
       return;
     }
-    // Restart triage rather than trying to undo individual answers.
     resetTriage();
     setCurrent(chiefQuestion);
     setPendingMulti([]);
@@ -171,10 +226,10 @@ export function StepSymptoms() {
   if (!current) {
     return (
       <StepLayout
-        step={3}
+        step={4}
         title="Wrapping up…"
         subtitle="Compiling your answers."
-        onContinue={() => setStep(4)}
+        onContinue={() => setStep(5)}
         continueLabel="Continue"
       >
         <View />
@@ -190,7 +245,7 @@ export function StepSymptoms() {
 
   return (
     <StepLayout
-      step={3}
+      step={4}
       title={current.text}
       subtitle={`Question ${questionNumber} of up to ${MAX_QUESTIONS}${
         isMulti ? ' · pick all that apply' : ''
@@ -254,28 +309,36 @@ export function StepSymptoms() {
         </View>
       ) : (
         <View style={styles.chipsRow}>
-          {current.options.map((opt) => {
-            const selected = !!pendingMulti.find((o) => o.id === opt.id);
-            return (
-              <Pressable
-                key={opt.id}
-                onPress={() =>
-                  isMulti ? toggleMulti(opt) : onSingleTap(opt)
-                }
-                style={({ pressed }) => [
-                  styles.chip,
-                  selected && styles.chipSelected,
-                  pressed && styles.chipPressed,
-                ]}
-              >
-                <Text
-                  style={[styles.chipText, selected && styles.chipTextSelected]}
+          {(() => {
+            // Filter options for chief complaint based on body map
+            let displayOptions = current.options;
+            if (current.id === CHIEF_COMPLAINT_ID && bodyMap && bodyMap.length > 0) {
+              const relevantIds = getRelevantChiefOptions(bodyMap);
+              displayOptions = current.options.filter(opt => relevantIds.has(opt.id));
+            }
+            return displayOptions.map((opt) => {
+              const selected = !!pendingMulti.find((o) => o.id === opt.id);
+              return (
+                <Pressable
+                  key={opt.id}
+                  onPress={() =>
+                    isMulti ? toggleMulti(opt) : onSingleTap(opt)
+                  }
+                  style={({ pressed }) => [
+                    styles.chip,
+                    selected && styles.chipSelected,
+                    pressed && styles.chipPressed,
+                  ]}
                 >
-                  {opt.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  <Text
+                    style={[styles.chipText, selected && styles.chipTextSelected]}
+                  >
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            });
+          })()}
         </View>
       )}
     </StepLayout>

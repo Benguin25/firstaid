@@ -2,6 +2,7 @@ import React from 'react';
 import { OnboardingProvider, useOnboarding } from './OnboardingContext';
 import { Step1PersonalInfo } from './Step1PersonalInfo';
 import { Step2Measurements } from './Step2Measurements';
+import { Step2bBodyMap as StepBodyMap } from './StepBodyMap';
 import { StepSymptoms } from './StepSymptoms';
 import { Step4Review } from './Step4Review';
 import { SuccessScreen } from './SuccessScreen';
@@ -17,8 +18,10 @@ function OnboardingFlow() {
     case 2:
       return <Step2Measurements />;
     case 3:
-      return <StepSymptoms />;
+      return <StepBodyMap />;
     case 4:
+      return <StepSymptoms />;
+    case 5:
       return <Step4Review />;
     default:
       return <Step1PersonalInfo />;
