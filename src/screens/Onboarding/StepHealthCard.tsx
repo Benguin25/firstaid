@@ -238,8 +238,8 @@ export function StepHealthCard() {
       </View>
 
       <View style={styles.choiceContent}>
-        <Text style={styles.brand}>FirstAid</Text>
-        <Text style={styles.welcome}>Welcome to FirstAid</Text>
+        <Text style={styles.brand}>Cura</Text>
+        <Text style={styles.welcome}>Welcome to Cura</Text>
         <Text style={styles.subtext}>
           Let's get you checked in. You can scan your OHIP card or enter your
           details manually.
