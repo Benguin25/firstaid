@@ -66,6 +66,7 @@ export function Step1PersonalInfo() {
       step={1}
       title="Personal information"
       subtitle="We'll use this to create your record."
+      onBack={() => setStep(0)}
       onContinue={onContinue}
     >
       <View style={styles.row}>
@@ -129,6 +130,19 @@ export function Step1PersonalInfo() {
             ) : null}
           </View>
         ) : null}
+      </Field>
+
+      <Field label="Health card number">
+        <TextInput
+          style={styles.input}
+          value={personal.healthCardNumber}
+          onChangeText={(v) => updatePersonal({ healthCardNumber: v })}
+          placeholder="1234-567-890-AB"
+          placeholderTextColor="#94a3b8"
+          autoCapitalize="characters"
+          autoCorrect={false}
+          returnKeyType="next"
+        />
       </Field>
 
       <Field label="Phone number" error={errors.phone}>
