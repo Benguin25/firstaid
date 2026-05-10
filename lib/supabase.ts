@@ -47,3 +47,17 @@ export async function insertPatient(data: PatientInsert): Promise<PatientRow> {
   if (error) throw error;
   return row as PatientRow;
 }
+
+export interface TriageInsert {
+  patient_id: string;
+  ctas_level: 1 | 2 | 3 | 4 | 5;
+  priority_score: number;
+  nurse_summary: string | null;
+  probable_conditions: { condition: string; probability: 'High' | 'Moderate' | 'Low' }[];
+  status?: 'waiting' | 'in-progress' | 'escalated' | 'discharged';
+}
+
+export async function insertTriage(data: TriageInsert): Promise<void> {
+  const { error } = await supabase.from('triage').insert(data);
+  if (error) throw error;
+}
