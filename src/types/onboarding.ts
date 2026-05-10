@@ -6,7 +6,9 @@ import type {
   TriageScore,
 } from '../lib/triage';
 
-export type StepIndex = 1 | 2 | 3 | 4 | 5;  // 3 = body map (new), 4 = symptoms, 5 = review
+// 0 = welcome, 1 = personal info, 2 = measurements,
+// 3 = body map, 4 = symptoms, 5 = review
+export type StepIndex = 0 | 1 | 2 | 3 | 4 | 5;
 
 export const TOTAL_STEPS = 5 as const;
 
