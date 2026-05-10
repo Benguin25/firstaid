@@ -1,0 +1,40 @@
+import React from 'react';
+import { OnboardingProvider, useOnboarding } from './OnboardingContext';
+import { StepHealthCard } from './StepHealthCard';
+import { Step1PersonalInfo } from './Step1PersonalInfo';
+import { Step2Measurements } from './Step2Measurements';
+import { Step2bBodyMap as StepBodyMap } from './StepBodyMap';
+import { StepSymptoms } from './StepSymptoms';
+import { Step4Review } from './Step4Review';
+import { SuccessScreen } from './SuccessScreen';
+
+function OnboardingFlow() {
+  const { state } = useOnboarding();
+
+  if (state.submitted) return <SuccessScreen />;
+
+  switch (state.step) {
+    case 0:
+      return <StepHealthCard />;
+    case 1:
+      return <Step1PersonalInfo />;
+    case 2:
+      return <Step2Measurements />;
+    case 3:
+      return <StepBodyMap />;
+    case 4:
+      return <StepSymptoms />;
+    case 5:
+      return <Step4Review />;
+    default:
+      return <StepHealthCard />;
+  }
+}
+
+export default function OnboardingScreen() {
+  return (
+    <OnboardingProvider>
+      <OnboardingFlow />
+    </OnboardingProvider>
+  );
+}
