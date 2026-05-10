@@ -1,5 +1,7 @@
 export type BaseWaits = Record<number, number>;
 
+export const MIN_WAIT_MINUTES = 3;
+
 // Used only when the database has no historical samples for a CTAS level yet.
 export const FALLBACK_BASE_WAIT: BaseWaits = {
   1: 0,
@@ -9,6 +11,11 @@ export const FALLBACK_BASE_WAIT: BaseWaits = {
   5: 120,
 };
 
+// Wait is purely a function of who's ahead — anyone further down the priority-
+// sorted queue must have a wait >= the patient above them. We deliberately do
+// NOT add a per-CTAS term for the patient themselves; that broke monotonicity
+// (a CTAS-1 patient at the back of the queue could otherwise come out with a
+// smaller estimate than a CTAS-2 patient near the front).
 export function estimateWaitMinutes(
   patientCtasLevel: number,
   queuePosition: number,
@@ -18,7 +25,10 @@ export function estimateWaitMinutes(
   const waitFromQueue = patientsAhead.reduce((total, p) => {
     return total + (baseWaits[p.ctasLevel] ?? 60) * 0.3;
   }, 0);
-  return Math.round((baseWaits[patientCtasLevel] ?? 60) + waitFromQueue);
+  // Floor at 3 minutes — even the front of the queue has some intake/handoff
+  // time, and "~0 min" reads worse than "~3 min" to a patient who's just
+  // checked in.
+  return Math.max(MIN_WAIT_MINUTES, Math.round(waitFromQueue));
 }
 
 export function formatWait(minutes: number): string {

@@ -17,9 +17,16 @@ export function useEstimateWait(
       const idx = queue.findIndex((q) => q.patient.id === patientId);
       if (idx === -1) return null;
 
+      // No wait estimate for patients who aren't actually waiting anymore.
+      const myStatus = queue[idx].triage.status;
+      if (myStatus !== 'waiting') return null;
+
+      // Discharged patients have left the system, so they shouldn't keep
+      // contributing to other patients' waits. In-progress and escalated
+      // patients are still occupying clinician capacity, so they do count.
       const ahead = queue
         .slice(0, idx)
-        .filter((q) => q.triage.status === 'waiting')
+        .filter((q) => q.triage.status !== 'discharged')
         .map((q) => ({ ctasLevel: q.triage.ctas_level }));
 
       return estimateWaitMinutes(
