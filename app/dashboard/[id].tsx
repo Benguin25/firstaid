@@ -362,6 +362,10 @@ export default function PatientDetailScreen() {
             <View style={styles.colRight}>
               <Card title="Patient info">
                 <Row
+                  label="Health card"
+                  value={patient.health_card_number ?? '—'}
+                />
+                <Row
                   label="Date of birth"
                   value={formatDob(patient.date_of_birth)}
                 />

@@ -21,6 +21,7 @@ export interface PatientRow {
   date_of_birth: string;
   phone: string;
   email: string;
+  health_card_number: string | null;
   weight_lbs: number;
   height_feet: number;
   height_inches: number;

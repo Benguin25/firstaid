@@ -129,12 +129,15 @@ function buildPatientInsert(state: OnboardingState): PatientInsert {
     asked: [...medicalHistory, ...triage.asked],
   };
 
+  const healthCard = personal.healthCardNumber.trim();
+
   return {
     first_name: personal.firstName.trim(),
     last_name: personal.lastName.trim(),
     date_of_birth: dob,
     phone: personal.phone.trim(),
     email: personal.email.trim(),
+    health_card_number: healthCard.length > 0 ? healthCard : null,
     weight_lbs: Number(measurements.weightLbs),
     height_feet: Number(measurements.heightFeet),
     height_inches: Number(measurements.heightInches),
