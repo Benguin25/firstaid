@@ -7,10 +7,18 @@ import {
   CHIEF_COMPLAINT,
   GENERAL_FLAG_QUESTIONS,
   SECTIONS,
+  SEVERITY_QUESTION,
   type CategoryCode,
   type Question,
   type QuestionOption,
 } from '../data/questionBank';
+
+export const SEVERITY_QUESTION_ID = SEVERITY_QUESTION.id;
+export const CHIEF_COMPLAINT_ID = CHIEF_COMPLAINT.id;
+// How much the patient's self-rated severity (1–10) influences the final
+// 0–1 score. Kept low so it nudges, but doesn't dominate, the bank-derived
+// signal weights.
+export const SEVERITY_BLEND_WEIGHT = 0.15;
 
 export type Priority = 'HIGH' | 'LOW' | 'DISMISSED';
 export type Tier = 1 | 2 | 3 | 4 | 5;
@@ -29,8 +37,10 @@ export interface AnsweredQuestion {
 
 export interface TriageScore {
   score: number; // 0–1
+  baseScore: number; // 0–1, before severity blend
   maxWeight: number;
   meanWeight: number;
+  selfSeverity: number | null;
   tier: Tier;
   priority: Priority;
 }
@@ -121,31 +131,64 @@ export function selectNextQuestion(
   asked: AnsweredQuestion[],
   category: CategoryCode | null,
 ): Question | null {
-  if (!category) return null;
   if (asked.length >= MAX_QUESTIONS) return null;
-  const queue = buildQueue(category);
+
   const askedIds = new Set(asked.map((a) => a.questionId));
+
+  // Always ask self-rated severity right after the chief complaint.
+  if (askedIds.has(CHIEF_COMPLAINT_ID) && !askedIds.has(SEVERITY_QUESTION_ID)) {
+    return SEVERITY_QUESTION;
+  }
+
+  if (!category) return null;
+  const queue = buildQueue(category);
   for (const q of queue) {
     if (!askedIds.has(q.id)) return q;
   }
   return null;
 }
 
-export function computeScore(asked: AnsweredQuestion[]): TriageScore {
-  const weights = asked.flatMap((a) => a.selected.map((s) => s.weight));
-  if (weights.length === 0) {
+export function computeScore(
+  asked: AnsweredQuestion[],
+  selfSeverity: number | null = null,
+): TriageScore {
+  // Severity options carry weight 0 in the bank, so they naturally drop out
+  // of max/mean. Filter defensively in case that ever changes.
+  const signalWeights = asked
+    .flatMap((a) => a.selected.map((s) => s.weight))
+    .filter((w) => w > 0);
+
+  if (signalWeights.length === 0 && selfSeverity === null) {
     return {
       score: 0,
+      baseScore: 0,
       maxWeight: 0,
       meanWeight: 0,
+      selfSeverity: null,
       tier: 5,
       priority: 'DISMISSED',
     };
   }
-  const maxWeight = Math.max(...weights);
-  const meanWeight = weights.reduce((s, w) => s + w, 0) / weights.length;
-  // 0–1 score: dominated by the worst signal, blended with overall acuity.
-  const score = Math.min(1, 0.7 * (maxWeight / 10) + 0.3 * (meanWeight / 10));
+
+  const maxWeight = signalWeights.length > 0 ? Math.max(...signalWeights) : 0;
+  const meanWeight =
+    signalWeights.length > 0
+      ? signalWeights.reduce((s, w) => s + w, 0) / signalWeights.length
+      : 0;
+
+  // Base score: dominated by the worst signal, blended with overall acuity.
+  const baseScore = 0.7 * (maxWeight / 10) + 0.3 * (meanWeight / 10);
+
+  // Light blend with self-rated severity (default 15% weight). Score stays
+  // bank-driven; severity only nudges.
+  const score =
+    selfSeverity === null
+      ? Math.min(1, baseScore)
+      : Math.min(
+          1,
+          (1 - SEVERITY_BLEND_WEIGHT) * baseScore +
+            SEVERITY_BLEND_WEIGHT * (selfSeverity / 10),
+        );
 
   let tier: Tier;
   if (maxWeight >= 10) tier = 1;
@@ -154,12 +197,26 @@ export function computeScore(asked: AnsweredQuestion[]): TriageScore {
   else if (maxWeight >= 3) tier = 4;
   else tier = 5;
 
+  // Tier nudge: someone reporting 8+ severity shouldn't be sent home outright,
+  // even if their bank-derived signals are all low. Bumps tier 5 → 4.
+  if (selfSeverity !== null && selfSeverity >= 8 && tier === 5) {
+    tier = 4;
+  }
+
   let priority: Priority;
   if (tier <= 3) priority = 'HIGH';
   else if (tier === 4) priority = 'LOW';
   else priority = 'DISMISSED';
 
-  return { score, maxWeight, meanWeight, tier, priority };
+  return {
+    score,
+    baseScore,
+    maxWeight,
+    meanWeight,
+    selfSeverity,
+    tier,
+    priority,
+  };
 }
 
 // Dynamic stopping: if we've already gathered enough evidence to be

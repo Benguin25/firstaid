@@ -2,16 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../../types/onboarding';
 import {
-  CATEGORY_LABEL,
   type Question,
   type QuestionOption,
 } from '../../data/questionBank';
 import {
+  CHIEF_COMPLAINT_ID,
   computeScore,
   findRoute,
   getChiefComplaintQuestion,
   MAX_QUESTIONS,
   selectNextQuestion,
+  SEVERITY_QUESTION_ID,
   shouldStopEarly,
   type AnsweredQuestion,
   type SelectedOption,
@@ -20,6 +21,7 @@ import { useOnboarding } from './OnboardingContext';
 import { StepLayout } from './components/StepLayout';
 
 const SINGLE_DELAY_MS = 400;
+const SCALE_DELAY_MS = 300;
 
 function toSelected(options: QuestionOption[]): SelectedOption[] {
   return options.map((o) => ({ id: o.id, label: o.label, weight: o.weight }));
@@ -31,6 +33,7 @@ export function StepSymptoms() {
     setStep,
     setTriageCategory,
     addTriageAnswer,
+    setSelfSeverity,
     finishTriage,
     resetTriage,
   } = useOnboarding();
@@ -75,32 +78,41 @@ export function StepSymptoms() {
     };
     addTriageAnswer(answer);
 
-    // Compute next state from the freshly built asked list.
-    const newAsked = [...triage.asked, answer];
-
     let nextCategory = triage.category;
-    if (q.id === chiefQuestion.id) {
+    let nextSeverity = triage.selfSeverity;
+
+    if (q.id === CHIEF_COMPLAINT_ID) {
       const route = findRoute(picked[0]);
       nextCategory = route ?? 'GENERAL';
       setTriageCategory(nextCategory);
     }
 
+    if (q.id === SEVERITY_QUESTION_ID) {
+      const value = Number(picked[0]?.label);
+      if (Number.isFinite(value)) {
+        nextSeverity = value;
+        setSelfSeverity(value);
+      }
+    }
+
+    const newAsked = [...triage.asked, answer];
+
     if (shouldStopEarly(newAsked)) {
-      finalize(newAsked);
+      finalize(newAsked, nextSeverity);
       return;
     }
 
     const nextQ = selectNextQuestion(newAsked, nextCategory);
     if (!nextQ) {
-      finalize(newAsked);
+      finalize(newAsked, nextSeverity);
       return;
     }
     setCurrent(nextQ);
     setPendingMulti([]);
   };
 
-  const finalize = (asked: AnsweredQuestion[]) => {
-    const score = computeScore(asked);
+  const finalize = (asked: AnsweredQuestion[], selfSeverity: number | null) => {
+    const score = computeScore(asked, selfSeverity);
     finishTriage(score);
     setCurrent(null);
   };
@@ -108,8 +120,21 @@ export function StepSymptoms() {
   const onSingleTap = (opt: QuestionOption) => {
     if (!current) return;
     if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(() => recordAnswer(current, [opt]), SINGLE_DELAY_MS);
-    setPendingMulti([opt]); // for visual selected feedback
+    advanceTimer.current = setTimeout(
+      () => recordAnswer(current, [opt]),
+      SINGLE_DELAY_MS,
+    );
+    setPendingMulti([opt]);
+  };
+
+  const onScaleTap = (opt: QuestionOption) => {
+    if (!current) return;
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = setTimeout(
+      () => recordAnswer(current, [opt]),
+      SCALE_DELAY_MS,
+    );
+    setPendingMulti([opt]);
   };
 
   const toggleMulti = (opt: QuestionOption) => {
@@ -137,20 +162,18 @@ export function StepSymptoms() {
       setStep(2);
       return;
     }
-    // Restart the triage flow rather than trying to undo individual answers.
+    // Restart triage rather than trying to undo individual answers.
     resetTriage();
     setCurrent(chiefQuestion);
     setPendingMulti([]);
   };
 
   if (!current) {
-    // Triage finished or no question available — show a minimal hold while
-    // the auto-advance effect sends us to step 4.
     return (
       <StepLayout
         step={3}
         title="Wrapping up…"
-        subtitle="Compiling your results."
+        subtitle="Compiling your answers."
         onContinue={() => setStep(4)}
         continueLabel="Continue"
       >
@@ -159,10 +182,10 @@ export function StepSymptoms() {
     );
   }
 
-  const liveScore = computeScore(triage.asked);
   const askedCount = triage.asked.length;
   const questionNumber = askedCount + 1;
   const isMulti = current.type === 'multi';
+  const isScale = current.type === 'scale';
   const continueDisabled = pendingMulti.length === 0;
 
   return (
@@ -171,42 +194,12 @@ export function StepSymptoms() {
       title={current.text}
       subtitle={`Question ${questionNumber} of up to ${MAX_QUESTIONS}${
         isMulti ? ' · pick all that apply' : ''
-      }`}
+      }${isScale ? ' · 1 = barely noticeable, 10 = worst imaginable' : ''}`}
       onBack={onBack}
       onContinue={onContinue}
       continueLabel="Continue"
       continueDisabled={continueDisabled}
     >
-      {/* Running urgency probability bar — updates as answers come in */}
-      {askedCount > 0 ? (
-        <View style={styles.scoreWrap}>
-          <View style={styles.scoreRow}>
-            <Text style={styles.scoreLabel}>
-              Current urgency · {triage.category ? CATEGORY_LABEL[triage.category] : '—'}
-            </Text>
-            <Text style={styles.scoreValue}>
-              {Math.round(liveScore.score * 100)}%
-            </Text>
-          </View>
-          <View style={styles.scoreTrack}>
-            <View
-              style={[
-                styles.scoreFill,
-                {
-                  width: `${Math.round(liveScore.score * 100)}%`,
-                  backgroundColor:
-                    liveScore.priority === 'HIGH'
-                      ? COLORS.danger
-                      : liveScore.priority === 'LOW'
-                      ? COLORS.warning
-                      : COLORS.primary,
-                },
-              ]}
-            />
-          </View>
-        </View>
-      ) : null}
-
       {/* Collapsible answer summary */}
       {askedCount > 0 ? (
         <>
@@ -236,68 +229,60 @@ export function StepSymptoms() {
       ) : null}
 
       {/* Options */}
-      <View style={styles.chipsRow}>
-        {current.options.map((opt) => {
-          const selected = !!pendingMulti.find((o) => o.id === opt.id);
-          return (
-            <Pressable
-              key={opt.id}
-              onPress={() =>
-                isMulti ? toggleMulti(opt) : onSingleTap(opt)
-              }
-              style={({ pressed }) => [
-                styles.chip,
-                selected && styles.chipSelected,
-                pressed && styles.chipPressed,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  selected && styles.chipTextSelected,
+      {isScale ? (
+        <View style={styles.scaleGrid}>
+          {current.options.map((opt) => {
+            const selected = !!pendingMulti.find((o) => o.id === opt.id);
+            return (
+              <Pressable
+                key={opt.id}
+                onPress={() => onScaleTap(opt)}
+                style={({ pressed }) => [
+                  styles.scaleBtn,
+                  selected && styles.scaleBtnSelected,
+                  pressed && styles.chipPressed,
                 ]}
               >
-                {opt.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <Text
+                  style={[styles.scaleText, selected && styles.scaleTextSelected]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : (
+        <View style={styles.chipsRow}>
+          {current.options.map((opt) => {
+            const selected = !!pendingMulti.find((o) => o.id === opt.id);
+            return (
+              <Pressable
+                key={opt.id}
+                onPress={() =>
+                  isMulti ? toggleMulti(opt) : onSingleTap(opt)
+                }
+                style={({ pressed }) => [
+                  styles.chip,
+                  selected && styles.chipSelected,
+                  pressed && styles.chipPressed,
+                ]}
+              >
+                <Text
+                  style={[styles.chipText, selected && styles.chipTextSelected]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
     </StepLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  scoreWrap: {
-    marginBottom: 16,
-  },
-  scoreRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  scoreLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  scoreValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-  scoreTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.border,
-    overflow: 'hidden',
-  },
-  scoreFill: {
-    height: '100%',
-    borderRadius: 3,
-  },
   historyHeader: {
     backgroundColor: COLORS.surface,
     borderRadius: 10,
@@ -364,5 +349,32 @@ const styles = StyleSheet.create({
   chipTextSelected: {
     color: '#ffffff',
     fontWeight: '600',
+  },
+  scaleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  scaleBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scaleBtnSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  scaleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  scaleTextSelected: {
+    color: '#ffffff',
   },
 });

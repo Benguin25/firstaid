@@ -33,6 +33,7 @@ const initialState: OnboardingState = {
   triage: {
     category: null,
     asked: [],
+    selfSeverity: null,
     score: null,
     finished: false,
   },
@@ -66,6 +67,11 @@ function reducer(state: OnboardingState, action: OnboardingAction): OnboardingSt
           ...state.triage,
           asked: [...state.triage.asked, action.answer],
         },
+      };
+    case 'TRIAGE_SET_SEVERITY':
+      return {
+        ...state,
+        triage: { ...state.triage, selfSeverity: action.selfSeverity },
       };
     case 'TRIAGE_FINISH':
       return {
@@ -130,6 +136,7 @@ interface OnboardingContextValue {
   updateMeasurements: (data: Partial<Measurements>) => void;
   setTriageCategory: (category: CategoryCode | null) => void;
   addTriageAnswer: (answer: AnsweredQuestion) => void;
+  setSelfSeverity: (selfSeverity: number | null) => void;
   finishTriage: (score: TriageScore) => void;
   resetTriage: () => void;
   setErrors: (errors: OnboardingState['errors']) => void;
@@ -161,6 +168,10 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   const addTriageAnswer = useCallback((answer: AnsweredQuestion) => {
     dispatch({ type: 'TRIAGE_ADD_ANSWER', answer });
+  }, []);
+
+  const setSelfSeverity = useCallback((selfSeverity: number | null) => {
+    dispatch({ type: 'TRIAGE_SET_SEVERITY', selfSeverity });
   }, []);
 
   const finishTriage = useCallback((score: TriageScore) => {
@@ -204,6 +215,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       updateMeasurements,
       setTriageCategory,
       addTriageAnswer,
+      setSelfSeverity,
       finishTriage,
       resetTriage,
       setErrors,
@@ -218,6 +230,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       updateMeasurements,
       setTriageCategory,
       addTriageAnswer,
+      setSelfSeverity,
       finishTriage,
       resetTriage,
       setErrors,

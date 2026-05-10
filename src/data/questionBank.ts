@@ -23,7 +23,7 @@ export type CategoryCode =
   | 'PHARMACY'
   | 'GENERAL';
 
-export type QuestionType = 'single' | 'multi';
+export type QuestionType = 'single' | 'multi' | 'scale';
 
 export interface QuestionOption {
   id: string; // 'a', 'b', etc.
@@ -38,6 +38,22 @@ export interface Question {
   type: QuestionType;
   options: QuestionOption[];
 }
+
+// ---------- SELF-RATED SEVERITY (always asked second) ----------
+// Stored separately in triage state and only lightly weighted in the score
+// (see src/lib/triage.ts). Each option carries weight 0 so it does not
+// pollute max/mean signal weights drawn from the bank.
+
+export const SEVERITY_QUESTION: Question = {
+  id: 'QSEV',
+  text: 'How severe does this feel right now?',
+  type: 'scale',
+  options: Array.from({ length: 10 }, (_, i) => ({
+    id: String(i + 1),
+    label: String(i + 1),
+    weight: 0,
+  })),
+};
 
 // ---------- SECTION 1: CHIEF COMPLAINT ----------
 

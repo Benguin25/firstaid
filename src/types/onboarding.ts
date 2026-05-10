@@ -27,6 +27,7 @@ export interface Measurements {
 export interface TriageState {
   category: CategoryCode | null;
   asked: AnsweredQuestion[];
+  selfSeverity: number | null;
   score: TriageScore | null;
   finished: boolean;
 }
@@ -49,6 +50,7 @@ export type OnboardingAction =
   | { type: 'UPDATE_MEASUREMENTS'; data: Partial<Measurements> }
   | { type: 'TRIAGE_SET_CATEGORY'; category: CategoryCode | null }
   | { type: 'TRIAGE_ADD_ANSWER'; answer: AnsweredQuestion }
+  | { type: 'TRIAGE_SET_SEVERITY'; selfSeverity: number | null }
   | { type: 'TRIAGE_FINISH'; score: TriageScore }
   | { type: 'TRIAGE_RESET' }
   | {
