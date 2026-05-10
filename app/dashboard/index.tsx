@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { dynamicPriority, useQueue } from '../../src/hooks/useQueue';
 import { useEstimateWait } from '../../src/hooks/useEstimateWait';
 import { formatWait as formatEstWait } from '../../src/lib/estimateWait';
+import { supabase } from '../../src/lib/supabase';
 import {
   CTAS_COLORS,
   DASHBOARD_COLORS as C,
@@ -168,12 +171,16 @@ function QueueRow({
   item,
   rank,
   onPress,
+  onDelete,
+  deleting,
   searchQuery,
   estimatedWaitMins,
 }: {
   item: PatientWithTriage;
   rank: number;
   onPress: () => void;
+  onDelete: () => void;
+  deleting: boolean;
   searchQuery: string;
   estimatedWaitMins: number | null;
 }) {
@@ -186,6 +193,7 @@ function QueueRow({
     triage.priority_score,
     triage.ctas_level as CtasLevel,
     patient.created_at,
+    triage.status,
   );
   const waitMins = minutesSince(patient.created_at);
   const waitOver60 = waitMins > 60;
@@ -271,6 +279,29 @@ function QueueRow({
           </Text>
         </View>
       </View>
+
+      <View style={styles.colDelete}>
+        <Pressable
+          onPress={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          disabled={deleting}
+          hitSlop={8}
+          accessibilityLabel={`Delete ${fullName || 'patient'}`}
+          style={({ pressed }) => [
+            styles.deleteBtn,
+            pressed && styles.deleteBtnPressed,
+            deleting && styles.deleteBtnDisabled,
+          ]}
+        >
+          {deleting ? (
+            <ActivityIndicator size="small" color="#dc2626" />
+          ) : (
+            <Text style={styles.deleteIcon}>🗑</Text>
+          )}
+        </Pressable>
+      </View>
     </Pressable>
   );
 }
@@ -288,6 +319,7 @@ function HeaderRow() {
       <Text style={[styles.headerCell, styles.colWaiting]}>Waiting</Text>
       <Text style={[styles.headerCell, styles.colEstWait]}>Est. Wait</Text>
       <Text style={[styles.headerCell, styles.colStatus]}>Status</Text>
+      <Text style={[styles.headerCell, styles.colDelete]}> </Text>
     </View>
   );
 }
@@ -301,11 +333,64 @@ export default function DashboardScreen() {
   const [filter, setFilter] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [now, setNow] = useState<Date>(new Date());
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const tick = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(tick);
   }, []);
+
+  const performDelete = useCallback(
+    async (patientId: string) => {
+      setDeletingId(patientId);
+      try {
+        const { error: delErr } = await supabase
+          .from('patients')
+          .delete()
+          .eq('id', patientId);
+        if (delErr) throw delErr;
+        await refetch();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Delete failed';
+        if (Platform.OS === 'web') {
+          // eslint-disable-next-line no-alert
+          window.alert(`Couldn't delete patient: ${msg}`);
+        } else {
+          Alert.alert("Couldn't delete patient", msg);
+        }
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [refetch],
+  );
+
+  const handleDelete = useCallback(
+    (item: PatientWithTriage) => {
+      const fullName =
+        `${item.patient.first_name} ${item.patient.last_name}`.trim() ||
+        'this patient';
+      const message = `Remove ${fullName} from the queue? This cannot be undone.`;
+      if (Platform.OS === 'web') {
+        // React Native's Alert.alert is a no-op on web — use the browser confirm.
+        // eslint-disable-next-line no-alert
+        const ok = window.confirm(message);
+        if (ok) void performDelete(item.patient.id);
+        return;
+      }
+      Alert.alert('Delete patient', message, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void performDelete(item.patient.id);
+          },
+        },
+      ]);
+    },
+    [performDelete],
+  );
 
   // Step 1 — apply status filter
   const afterFilter = useMemo(() => {
@@ -446,6 +531,8 @@ export default function DashboardScreen() {
                     rank={idx}
                     searchQuery={searchQuery}
                     estimatedWaitMins={estimateFor(item.patient.id)}
+                    deleting={deletingId === item.patient.id}
+                    onDelete={() => handleDelete(item)}
                     onPress={() =>
                       router.push({
                         pathname: '/dashboard/[id]',
@@ -630,6 +717,21 @@ const styles = StyleSheet.create({
   colWaiting: { width: 100 },
   colEstWait: { width: 100 },
   colStatus: { width: 120, alignItems: 'flex-start' },
+  colDelete: { width: 44, alignItems: 'center' },
+  deleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  deleteBtnPressed: { backgroundColor: '#fee2e2' },
+  deleteBtnDisabled: { opacity: 0.5 },
+  deleteIcon: {
+    fontSize: 18,
+    color: '#dc2626',
+  },
   rankText: {
     fontSize: 22,
     fontWeight: '700',

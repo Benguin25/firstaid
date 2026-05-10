@@ -86,15 +86,27 @@ export function usePatient(id: string | undefined): UsePatientResult {
   const updateStatus = useCallback(
     async (status: TriageStatus) => {
       if (!id) return;
+      // Discharged patients drop to the bottom of the queue.
+      const patch =
+        status === 'discharged' ? { status, priority_score: 0 } : { status };
       const { error: updErr } = await supabase
         .from('triage')
-        .update({ status })
+        .update(patch)
         .eq('patient_id', id);
       if (updErr) throw updErr;
       // Optimistic local update so the header pill updates instantly even
       // before realtime echoes the change back.
       setData((prev) =>
-        prev ? { ...prev, triage: { ...prev.triage, status } } : prev,
+        prev
+          ? {
+              ...prev,
+              triage: {
+                ...prev.triage,
+                status,
+                ...(status === 'discharged' ? { priority_score: 0 } : null),
+              },
+            }
+          : prev,
       );
     },
     [id],

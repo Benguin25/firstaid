@@ -5,6 +5,7 @@ import type {
   PatientRow,
   PatientWithTriage,
   TriageRow,
+  TriageStatus,
 } from '../types/supabase';
 
 interface UseQueueResult {
@@ -26,7 +27,9 @@ export function dynamicPriority(
   priorityScore: number,
   ctasLevel: number,
   createdAt: string,
+  status?: TriageStatus,
 ): number {
+  if (status === 'discharged') return 0;
   const minutesWaiting = (Date.now() - new Date(createdAt).getTime()) / 60000;
   const weight = WAIT_WEIGHTS[ctasLevel] ?? 0.5;
   return Math.round(priorityScore + minutesWaiting * weight);
@@ -38,11 +41,13 @@ function sortByDynamic(rows: PatientWithTriage[]): PatientWithTriage[] {
       a.triage.priority_score,
       a.triage.ctas_level as CtasLevel,
       a.patient.created_at,
+      a.triage.status,
     );
     const db = dynamicPriority(
       b.triage.priority_score,
       b.triage.ctas_level as CtasLevel,
       b.patient.created_at,
+      b.triage.status,
     );
     return db - da;
   });
