@@ -11,6 +11,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { dynamicPriority, useQueue } from '../../src/hooks/useQueue';
+import { useEstimateWait } from '../../src/hooks/useEstimateWait';
+import { formatWait as formatEstWait } from '../../src/lib/estimateWait';
 import {
   CTAS_COLORS,
   DASHBOARD_COLORS as C,
@@ -167,11 +169,13 @@ function QueueRow({
   rank,
   onPress,
   searchQuery,
+  estimatedWaitMins,
 }: {
   item: PatientWithTriage;
   rank: number;
   onPress: () => void;
   searchQuery: string;
+  estimatedWaitMins: number | null;
 }) {
   const { patient, triage } = item;
   const ctasColor = CTAS_COLORS[triage.ctas_level];
@@ -254,6 +258,12 @@ function QueueRow({
         </Text>
       </View>
 
+      <View style={styles.colEstWait}>
+        <Text style={styles.estWaitText}>
+          {estimatedWaitMins === null ? '—' : formatEstWait(estimatedWaitMins)}
+        </Text>
+      </View>
+
       <View style={styles.colStatus}>
         <View style={[styles.statusPill, { backgroundColor: statusMeta.bg }]}>
           <Text style={[styles.statusText, { color: statusMeta.fg }]}>
@@ -276,6 +286,7 @@ function HeaderRow() {
       <Text style={[styles.headerCell, styles.colCtas]}>CTAS</Text>
       <Text style={[styles.headerCell, styles.colPriority]}>Priority</Text>
       <Text style={[styles.headerCell, styles.colWaiting]}>Waiting</Text>
+      <Text style={[styles.headerCell, styles.colEstWait]}>Est. Wait</Text>
       <Text style={[styles.headerCell, styles.colStatus]}>Status</Text>
     </View>
   );
@@ -286,6 +297,7 @@ function HeaderRow() {
 export default function DashboardScreen() {
   const router = useRouter();
   const { data, loading, error, refetch } = useQueue();
+  const estimateFor = useEstimateWait(data);
   const [filter, setFilter] = useState<FilterTab>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [now, setNow] = useState<Date>(new Date());
@@ -433,6 +445,7 @@ export default function DashboardScreen() {
                     item={item}
                     rank={idx}
                     searchQuery={searchQuery}
+                    estimatedWaitMins={estimateFor(item.patient.id)}
                     onPress={() =>
                       router.push({
                         pathname: '/dashboard/[id]',
@@ -615,6 +628,7 @@ const styles = StyleSheet.create({
   colCtas: { width: 70, alignItems: 'flex-start' },
   colPriority: { width: 100 },
   colWaiting: { width: 100 },
+  colEstWait: { width: 100 },
   colStatus: { width: 120, alignItems: 'flex-start' },
   rankText: {
     fontSize: 22,
@@ -664,6 +678,12 @@ const styles = StyleSheet.create({
   },
   waitText: {
     fontSize: 14,
+    color: C.textPrimary,
+    fontVariant: ['tabular-nums'],
+  },
+  estWaitText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: C.textPrimary,
     fontVariant: ['tabular-nums'],
   },
