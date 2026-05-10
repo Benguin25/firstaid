@@ -325,7 +325,7 @@ export default function DashboardScreen() {
 
         {/* ── Header ── */}
         <View style={styles.header}>
-          <Text style={styles.title}>FirstAid Dashboard</Text>
+          <Text style={styles.title}>Cura Dashboard</Text>
           <Text style={styles.clock}>{formatClock(now)}</Text>
         </View>
 
