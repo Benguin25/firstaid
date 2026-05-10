@@ -11,7 +11,11 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+<<<<<<< HEAD
     ".expo/types/**/*.d.ts",
     "nativewind-env.d.ts"
+=======
+    ".expo/types/**/*.d.ts"
+>>>>>>> 783c29eba9004df7fba6de114732cfcf8b372192
   ]
 }
