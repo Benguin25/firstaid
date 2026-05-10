@@ -6,7 +6,7 @@ import type {
   TriageScore,
 } from '../lib/triage';
 
-export type StepIndex = 1 | 2 | 3 | 4;
+export type StepIndex = 0 | 1 | 2 | 3 | 4;
 
 export const TOTAL_STEPS = 4 as const;
 
@@ -16,6 +16,7 @@ export interface PersonalInfo {
   dateOfBirth: string | null;
   phone: string;
   email: string;
+  healthCardNumber: string;
 }
 
 export interface Measurements {

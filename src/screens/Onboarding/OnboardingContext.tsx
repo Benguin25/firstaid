@@ -22,13 +22,14 @@ import type {
 } from '../../types/onboarding';
 
 const initialState: OnboardingState = {
-  step: 1,
+  step: 0,
   personal: {
     firstName: '',
     lastName: '',
     dateOfBirth: null,
     phone: '',
     email: '',
+    healthCardNumber: '',
   },
   measurements: {
     weightLbs: '',

@@ -65,7 +65,7 @@ export function StepSymptoms() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialQuestion]);
 
-  // Auto-advance to step 4 once triage finishes.
+  // Auto-advance to review once triage finishes.
   useEffect(() => {
     if (triage.finished) setStep(4);
   }, [triage.finished, setStep]);
