@@ -1,44 +1,97 @@
 # Cura
 
-https://firstaid-theta.vercel.app/dashboard
+[Live dashboard](https://firstaid-theta.vercel.app/dashboard) · [Patient app](https://firstaid-theta.vercel.app/)
 
-https://firstaid-theta.vercel.app/
-
-## What is this?
-
-firstAId is a mobile-first triage intake system designed to reduce wait times in hospitals and pharmacies. Patients check in through the app, answer a structured symptom questionnaire, and are automatically assigned a priority level. Staff see a live dashboard sorted by severity so the most critical patients are always seen first.
+A mobile-first ER triage app that replaces the waiting room's "first come, first served" queue with priority-based queueing — so the heart attack patient doesn't wait behind the sore throat.
 
 ---
 
-## The problem it solves
+## The problem
 
-Walk-in patients currently wait in line regardless of how serious their condition is. A person having a cardiac event and a person with a mild rash join the same queue. firstAId fixes this by triaging patients at check-in using a structured symptom tree, then placing them in a priority queue so clinical staff can see who needs attention most urgently.
+Walk-in ERs use a single FIFO queue. A patient with crushing chest pain joins the same line as a patient with a rash. Triage nurses re-rank manually, but they're the bottleneck — and patients wait blind, with no sense of why someone who arrived after them is being seen first.
 
----
+## The solution
 
-## Core features
+Patients self-check-in on a phone. They scan their health card, answer 5–10 adaptive symptom questions, and the app:
 
-| Feature | Description |
-|---|---|
-| Patient intake form | Collects name, DOB, contact info, height, weight, allergies, and chief complaint |
-| Health card lookup | Returning patients are identified by health card — no need to re-enter info |
-| Symptom questionnaire | Branching question tree covering ER and pharmacy scenarios |
-| Automatic triage | Symptoms + pain level → severity tier (1–5) + priority score |
-| Live queue dashboard | Staff view sorted by priority; updates in real time |
-| Patient search | Search queue by name or health card number |
-| Status management | Staff move patients through waiting → in-progress → discharged |
-| Medical records | Post-treatment results linked to the patient visit |
+1. Computes a CTAS level (Canadian Triage Acuity Scale, 1–5) and a priority score on-device
+2. Drops them into a live queue staff see, sorted by priority
+3. Generates an AI clinical summary the doctor can read in ten seconds before walking in
+
+Patients see their estimated wait. Staff see who needs them most. No clipboard.
 
 ---
 
 ## Tech stack
 
-| Layer | Technology |
+| Layer | Tech |
 |---|---|
-| Mobile frontend | React Native (Expo) |
-| Backend API | Python — FastAPI |
-| Database | MySQL |
-| Navigation | Expo Router |
+| Mobile / web | React Native (Expo, Expo Router) |
+| Database + realtime | Supabase (Postgres + Realtime channels) |
+| AI | Claude Haiku 4.5 — clinical summary (text) + health card OCR (vision) |
+| Forms | React Hook Form + Zod |
+| State | Zustand |
+| Styling | Tailwind |
+
+---
+
+## Algorithm — how triage works
+
+**Inputs:** chief complaint (1 of 21 categories) → 5–10 adaptive symptom answers → self-rated severity (1–10).
+
+### Adaptive questioning
+
+A bank of **137 questions across 21 categories**, each answer carrying a clinical weight `1–10`. The engine routes the patient through the subset relevant to their chief complaint, always asks self-severity right after, and **stops early** once enough high-weight signals have been collected (≥ 2 answers weighted ≥ 8 with a max of 10). Most patients finish in 3–6 minutes.
+
+### Score
+
+```
+baseScore  = 0.7 × (maxWeight / 10) + 0.3 × (meanWeight / 10)
+finalScore = 0.85 × baseScore + 0.15 × (selfSeverity / 10)
+```
+
+The heaviest signal dominates — you don't want a 10/10 chest-pain answer averaged down to neutral by ten unremarkable ones. Mean weight provides a tiebreaker for overall acuity. Self-severity nudges; it doesn't drive.
+
+### CTAS tier
+
+| Tier | Max signal weight | Label |
+|---|---|---|
+| 1 | ≥ 10 | Critical |
+| 2 | ≥ 8 | Emergent |
+| 3 | ≥ 6 | Urgent |
+| 4 | ≥ 3 | Semi-urgent |
+| 5 | < 3 | Non-urgent |
+
+A self-rated severity of 8+ promotes tier 5 → tier 4 — we don't send someone home if they're hurting, even if their answers don't trigger any flags.
+
+### Dynamic queue priority
+
+Rank isn't frozen at intake. Every minute, each patient's effective priority climbs by a CTAS-weighted wait penalty:
+
+```
+dynamicPriority = priorityScore + minutesWaiting × WAIT_WEIGHT[ctas]
+WAIT_WEIGHT = { 1: 0, 2: 0.3, 3: 0.6, 4: 1.0, 5: 1.2 }
+```
+
+A CTAS-1 patient is already at the top — waiting can't push them higher. A CTAS-4 patient who's been waiting 90 minutes will catch up to a CTAS-3 who just walked in. This prevents low-acuity patients from being indefinitely starved while still putting the sickest first.
+
+### Wait time estimate
+
+Derived from who's ahead in the queue, weighted by their CTAS level — not a flat per-tier bucket. Calibrates from the DB's historical samples; falls back to defaults until enough data exists.
+
+---
+
+## Features
+
+- **Health card scan** — Claude Vision parses an Ontario OHIP card photo into name, DOB, and card number. Saves two minutes of typing.
+- **Adaptive triage interview** — 5–10 questions max, dynamic stopping, self-severity blend, runs entirely on-device
+- **Body map** — tap-to-select pain regions, persisted with the visit
+- **AI clinical summary** — Haiku reads the patient's Q&A and writes a 2–3 sentence pre-read for the attending physician
+- **Live staff dashboard** — Supabase Realtime; queue re-ranks itself as patients arrive and waits accumulate
+- **Search + filter** — by name, health card number, or status (waiting / in-progress)
+- **Patient detail view** — vitals, allergies, full Q&A, body map, probable conditions, status controls
+- **Status workflow** — waiting → in-progress → discharged, with escalation to a higher tier when a patient deteriorates
+- **Estimated wait time** — calibrates from historical data, shown to both patient and staff
 
 ---
 
@@ -46,168 +99,50 @@ Walk-in patients currently wait in line regardless of how serious their conditio
 
 ```
 firstaid/
-│
-├── app/                        # Expo Router screens
-│   ├── dashboard/
-│   │   ├── _layout.tsx         # Stack navigator (no header)
-│   │   ├── index.tsx           # Staff queue dashboard + search
-│   │   └── [id].tsx            # Individual patient detail screen
-│   └── ...                     # Onboarding / intake screens (TBD)
-│
+├── app/                       # Expo Router screens
+│   ├── onboarding/            # Health card scan + intake
+│   └── dashboard/             # Staff queue + patient detail
 ├── src/
+│   ├── data/
+│   │   ├── questionBank.ts    # 137 weighted questions, 21 categories
+│   │   └── bodyMap.ts         # Body region definitions
 │   ├── hooks/
-│   │   ├── useQueue.ts         # Fetches and sorts the patient queue
-│   │   └── usePatient.ts       # Fetches a single patient + triage row
-│   └── types/
-│       └── supabase.ts         # Shared types: PatientRow, TriageStatus, CTAS levels
-│
-├── backend/
-│   ├── main.py                 # FastAPI app entry point + CORS
-│   ├── database.py             # MySQL connection pool
-│   ├── models.py               # Pydantic request/response models
-│   ├── triage.py               # Triage tree logic + priority scoring
-│   ├── routes_triage.py        # API routes: /patients, /queue, /triage/status
-│   └── .env                    # DB credentials (never commit this)
-│
-├── docs/
-│   └── symptom_question_bank.txt   # Full 137-question symptom bank (21 categories)
-│
-└── README.md
+│   │   ├── useQueue.ts        # Realtime queue + dynamic re-ranking
+│   │   ├── usePatient.ts      # Single patient + triage row
+│   │   └── useEstimateWait.ts # Per-patient wait estimate
+│   ├── lib/
+│   │   ├── triage.ts          # Adaptive questioning + score engine
+│   │   ├── aiSummary.ts       # Claude clinical summary
+│   │   ├── parseHealthCard.ts # Claude Vision OHIP OCR
+│   │   ├── estimateWait.ts    # Wait time math
+│   │   └── supabase.ts        # Supabase client
+│   └── types/                 # Shared TypeScript types
+└── database/
+    └── database.sql           # Postgres schema
 ```
-
----
-
-## Database schema
-
-Five tables. All linked through `patient.id` as the root foreign key.
-
-```
-patient
-  └── patient_symptoms   (one row per symptom per visit)
-  └── triage             (severity level, priority score, queue status)
-  └── results            (filled by doctor post-treatment)
-        └── medical_record  (archived visit record, links patient + result)
-```
-
-| Table | Purpose |
-|---|---|
-| `patient` | Basic intake info — name, DOB, contact, vitals, chief complaint |
-| `patient_symptoms` | Normalised symptom rows (one per symptom) |
-| `triage` | Triage output — severity 1–5, priority score, queue position, status |
-| `results` | Doctor-filled diagnosis, treatment, and medication after the visit |
-| `medical_record` | Final archived record linking the visit to results |
-
----
-
-## Triage logic
-
-Severity is determined by a top-down decision tree. The first branch that matches wins.
-
-| Tier | Severity | Priority score | Queue outcome |
-|---|---|---|---|
-| Critical | 1 | 90 + pain level | Top of queue — seen immediately |
-| Emergent | 2 | 70 + pain level | High priority — 15–30 min |
-| Urgent | 3 | 50 + pain level | Standard queue — 45–90 min |
-| Semi-urgent | 4 | 30 + pain level | Lower queue — 1.5–3 hrs |
-| Non-urgent | 5 | 0 | Go home — not queued |
-
-Three inputs feed the tree: the patient's **symptom set**, their **pain level (1–10)**, and their **chief complaint** (free text scanned for red-flag words). Pain level alone can override tier — a pain of 9/10 with no flagged symptoms still hits tier 1.
-
-Within the same tier, patients are sorted by `priority_score DESC` then `arrival_time ASC` (earlier arrival wins the tie).
-
----
-
-## API endpoints
-
-| Method | Route | Description |
-|---|---|---|
-| `POST` | `/patients` | Register patient, run triage, write queue row |
-| `GET` | `/queue` | Return waiting queue sorted by priority |
-| `PATCH` | `/triage/{patient_id}/status` | Update status: waiting / in-progress / discharged |
-| `POST` | `/results` | Doctor submits diagnosis and treatment |
-| `POST` | `/records` | Create medical record for a visit |
-| `GET` | `/records/{patient_id}` | Fetch all records for a patient |
 
 ---
 
 ## Getting started
 
-### Backend
-
 ```bash
-# 1. Install dependencies
-pip install fastapi uvicorn mysql-connector-python python-dotenv
-
-# 2. Create your .env file
-cp backend/.env.example backend/.env
-# Fill in DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-
-# 3. Run the database schema
-mysql -u root -p < schema.sql
-
-# 4. Start the API
-cd backend
-uvicorn main:app --reload
-```
-
-API runs at `http://localhost:8000`
-Interactive docs at `http://localhost:8000/docs`
-
-### Frontend
-
-```bash
-# 1. Install dependencies
+cd firstaid
 npm install
-
-# 2. Start Expo
-npx expo start
+npx expo start          # press w for web, scan QR for device
 ```
 
-> On a physical device, replace `localhost` in the API base URL with your machine's local IP address (e.g. `192.168.x.x`).
-
----
-
-## Environment variables
-
-Create a `.env` file in the `backend/` directory:
+Required env vars in `firstaid/.env`:
 
 ```
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=hospital_db
-DB_USER=root
-DB_PASSWORD=yourpassword
+EXPO_PUBLIC_SUPABASE_URL=...
+EXPO_PUBLIC_SUPABASE_ANON_KEY=...
+EXPO_PUBLIC_ANTHROPIC_API_KEY=...
 ```
 
-Never commit this file. It is listed in `.gitignore`.
+Apply the schema once in the Supabase SQL editor (`database/database.sql`).
 
 ---
 
-## Symptom question bank
+## Status
 
-A structured question bank covering 21 medical categories is in `docs/symptom_question_bank.txt`. It contains 137 questions with per-answer triage weights (1–10). The frontend routes patients through a relevant subset based on their chief complaint — average completion time is 3–6 minutes.
-
-Categories covered: Cardiovascular · Respiratory · Neurological · Trauma · Gastrointestinal · Infectious disease · Pain · Mental health · Allergic reactions & toxicology · Dermatological · Urological · Reproductive/Obstetric · ENT · Musculoskeletal · Ophthalmological · Paediatric · Endocrine/Metabolic · Pharmacy · Vitals · General flags
-
----
-
-## Known limitations / work in progress
-
-- Health card lookup is not yet a dedicated column — currently matched against `patient.id`
-- Onboarding / patient-facing intake screens are in progress
-- Authentication and role-based access (patient vs. staff) not yet implemented
-- `queue_position` is a static integer — dynamic re-ranking on status change is planned
-- `CTAS_COLORS`, `CTAS_LABELS`, and `STATUS_COLORS` are defined in `src/types/supabase.ts` and may need updating as triage levels are refined
-- No test suite yet
-
----
-
-## Contributing
-
-This project is under active development. The schema, API routes, and triage logic are all subject to change. If you're updating this codebase, update this README to reflect any structural changes.
-
----
-
-## License
-
-TBD
+Hackathon MVP. Working: intake → triage → queue → detail → status workflow, health card OCR, AI summary. In progress: authentication / role-based access, structured post-visit records.
