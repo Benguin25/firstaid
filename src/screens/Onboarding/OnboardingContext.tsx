@@ -5,7 +5,12 @@ import React, {
   useMemo,
   useReducer,
 } from 'react';
-import { insertPatient, type PatientInsert } from '../../../lib/supabase';
+import {
+  insertPatient,
+  insertTriage,
+  type PatientInsert,
+  type TriageInsert,
+} from '../../../lib/supabase';
 import type { CategoryCode } from '../../data/questionBank';
 import type { AnsweredQuestion, TriageScore } from '../../lib/triage';
 import type {
@@ -129,6 +134,36 @@ function buildPatientInsert(state: OnboardingState): PatientInsert {
   };
 }
 
+function buildTriageInsert(
+  patientId: string,
+  state: OnboardingState,
+): TriageInsert {
+  const { triage } = state;
+  const tier = triage.score?.tier ?? 5;
+  const score01 = triage.score?.score ?? 0;
+  const priorityScore = Math.max(0, Math.min(100, Math.round(score01 * 100)));
+
+  const summaryParts: string[] = [];
+  if (triage.category) {
+    summaryParts.push(
+      `Chief complaint: ${triage.category.toLowerCase().replace(/_/g, ' ')}.`,
+    );
+  }
+  if (triage.selfSeverity !== null) {
+    summaryParts.push(`Self-reported severity: ${triage.selfSeverity}/10.`);
+  }
+  summaryParts.push(`${triage.asked.length} symptom answers on file.`);
+
+  return {
+    patient_id: patientId,
+    ctas_level: tier,
+    priority_score: priorityScore,
+    nurse_summary: summaryParts.join(' '),
+    probable_conditions: [],
+    status: 'waiting',
+  };
+}
+
 interface OnboardingContextValue {
   state: OnboardingState;
   setStep: (step: StepIndex) => void;
@@ -199,10 +234,12 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     dispatch({ type: 'SUBMIT_START' });
     try {
       const row = await insertPatient(payload);
+      const triagePayload = buildTriageInsert(row.id, state);
+      await insertTriage(triagePayload);
       dispatch({ type: 'SUBMIT_SUCCESS', patientId: row.id });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Submission failed';
-      console.error('insertPatient failed', err);
+      console.error('patient/triage insert failed', err);
       dispatch({ type: 'SUBMIT_ERROR', error: message });
     }
   }, [state]);
