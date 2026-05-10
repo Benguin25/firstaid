@@ -5,7 +5,7 @@ let _db: SQLite.SQLiteDatabase | null = null;
 
 export function getDb(): SQLite.SQLiteDatabase {
   if (!_db) {
-    _db = SQLite.openDatabaseSync('firstaid.db');
+    _db = SQLite.openDatabaseSync('cura.db');
     _db.execSync(CREATE_PATIENTS);
     _db.execSync(CREATE_VISITS);
     _db.execSync(CREATE_HCV_CHECKS);
