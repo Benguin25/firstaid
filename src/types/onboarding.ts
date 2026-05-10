@@ -6,9 +6,9 @@ import type {
   TriageScore,
 } from '../lib/triage';
 
-export type StepIndex = 0 | 1 | 2 | 3 | 4;
+export type StepIndex = 1 | 2 | 3 | 4 | 5;  // 3 = body map (new), 4 = symptoms, 5 = review
 
-export const TOTAL_STEPS = 4 as const;
+export const TOTAL_STEPS = 5 as const;
 
 export interface PersonalInfo {
   firstName: string;
@@ -37,6 +37,7 @@ export interface OnboardingState {
   step: StepIndex;
   personal: PersonalInfo;
   measurements: Measurements;
+  bodyMap: string[];             // NEW: selected area keys from the body diagram, e.g. ["4","10","3"]
   triage: TriageState;
   submitting: boolean;
   submitted: boolean;
@@ -49,6 +50,7 @@ export type OnboardingAction =
   | { type: 'SET_STEP'; step: StepIndex }
   | { type: 'UPDATE_PERSONAL'; data: Partial<PersonalInfo> }
   | { type: 'UPDATE_MEASUREMENTS'; data: Partial<Measurements> }
+  | { type: 'UPDATE_BODY_MAP'; bodyMap: string[] }  // NEW
   | { type: 'TRIAGE_SET_CATEGORY'; category: CategoryCode | null }
   | { type: 'TRIAGE_ADD_ANSWER'; answer: AnsweredQuestion }
   | { type: 'TRIAGE_SET_SEVERITY'; selfSeverity: number | null }

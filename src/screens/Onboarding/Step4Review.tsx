@@ -82,10 +82,10 @@ export function Step4Review() {
 
   return (
     <StepLayout
-      step={4}
+      step={5}
       title="Review & submit"
       subtitle="Confirm everything looks right before checking in."
-      onBack={() => setStep(3)}
+      onBack={() => setStep(4)}
       onContinue={handleSubmit}
       continueLabel={submitting ? 'Submitting…' : 'Submit'}
       continueDisabled={submitting}
@@ -112,7 +112,7 @@ export function Step4Review() {
         />
       </Section>
 
-      <Section title="Symptom answers" onEdit={goEdit(3)}>
+      <Section title="Symptom answers" onEdit={goEdit(4)}>
         <AnsweredList asked={triage.asked} />
       </Section>
 

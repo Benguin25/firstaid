@@ -36,6 +36,8 @@ const initialState: OnboardingState = {
     heightFeet: '',
     heightInches: '',
   },
+  // NEW: body map selections from the interactive body diagram
+  bodyMap: [],
   triage: {
     category: null,
     asked: [],
@@ -61,6 +63,9 @@ function reducer(state: OnboardingState, action: OnboardingAction): OnboardingSt
         ...state,
         measurements: { ...state.measurements, ...action.data },
       };
+    // NEW: replace the entire bodyMap array with whatever the WebView sends back
+    case 'UPDATE_BODY_MAP':
+      return { ...state, bodyMap: action.bodyMap };
     case 'TRIAGE_SET_CATEGORY':
       return {
         ...state,
@@ -110,7 +115,7 @@ function reducer(state: OnboardingState, action: OnboardingAction): OnboardingSt
 }
 
 function buildPatientInsert(state: OnboardingState): PatientInsert {
-  const { personal, measurements, triage } = state;
+  const { personal, measurements, triage, bodyMap } = state;
   const dob = personal.dateOfBirth
     ? new Date(personal.dateOfBirth).toISOString().slice(0, 10)
     : '';
@@ -130,7 +135,8 @@ function buildPatientInsert(state: OnboardingState): PatientInsert {
     weight_lbs: Number(measurements.weightLbs),
     height_feet: Number(measurements.heightFeet),
     height_inches: Number(measurements.heightInches),
-    body_map: {},
+    // bodyMap is now a real array of selected part keys, e.g. ["3","4","10"]
+    body_map: bodyMap,
     symptoms_text: JSON.stringify(triagePayload),
   };
 }
@@ -170,6 +176,8 @@ interface OnboardingContextValue {
   setStep: (step: StepIndex) => void;
   updatePersonal: (data: Partial<PersonalInfo>) => void;
   updateMeasurements: (data: Partial<Measurements>) => void;
+  // NEW
+  updateBodyMap: (bodyMap: string[]) => void;
   setTriageCategory: (category: CategoryCode | null) => void;
   addTriageAnswer: (answer: AnsweredQuestion) => void;
   setSelfSeverity: (selfSeverity: number | null) => void;
@@ -196,6 +204,11 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
 
   const updateMeasurements = useCallback((data: Partial<Measurements>) => {
     dispatch({ type: 'UPDATE_MEASUREMENTS', data });
+  }, []);
+
+  // NEW
+  const updateBodyMap = useCallback((bodyMap: string[]) => {
+    dispatch({ type: 'UPDATE_BODY_MAP', bodyMap });
   }, []);
 
   const setTriageCategory = useCallback((category: CategoryCode | null) => {
@@ -245,12 +258,14 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
     }
   }, [state]);
 
+  
   const value = useMemo<OnboardingContextValue>(
     () => ({
       state,
       setStep,
       updatePersonal,
       updateMeasurements,
+      updateBodyMap,
       setTriageCategory,
       addTriageAnswer,
       setSelfSeverity,
@@ -266,6 +281,7 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
       setStep,
       updatePersonal,
       updateMeasurements,
+      updateBodyMap,
       setTriageCategory,
       addTriageAnswer,
       setSelfSeverity,

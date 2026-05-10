@@ -1,0 +1,124 @@
+/* General Page Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    margin: 0;
+    padding: 20px;
+    color: #333;
+    line-height: 1.6;
+}
+
+h1, h2 {
+    text-align: center;
+    color: #2c3e50;
+}
+
+/* Image Map Container */
+img[usemap="#image-map"] {
+    display: block;
+    margin: 0 auto;
+    border: 2px solid #bdc3c7;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+img[usemap="#image-map"]:hover {
+    transform: scale(1.02);
+}
+
+/* Body Parts (mostly overridden by ImageMapster, but kept for fallback) */
+.bodyParts {
+    border-color: black;
+    fill: #72B8FC;
+    cursor: pointer;
+}
+
+area.bodyParts {
+    fill: black;
+    stroke: gray;
+    stroke-width: 4;
+    cursor: pointer;
+}
+
+area.bodyParts:hover {
+    stroke: black;
+}
+
+/* Selections Display */
+#selections {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+}
+
+#selections ul {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0 0;
+}
+
+#selections li {
+    background: #3498db;
+    color: white;
+    padding: 5px 10px;
+    margin: 5px;
+    border-radius: 4px;
+    display: inline-block;
+    font-size: 14px;
+}
+
+/* Reset Button */
+#reset-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.3s ease;
+    display: block;
+    margin: 10px auto;
+}
+
+#reset-btn:hover {
+    background: #c0392b;
+}
+
+/* Instructions */
+#reset-btn + div {
+    text-align: center;
+    font-style: italic;
+    color: #7f8c8d;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+
+    img[usemap="#image-map"] {
+        width: 100%;
+        max-width: 400px;
+    }
+
+    #selections li {
+        display: block;
+        margin: 5px auto;
+        width: fit-content;
+    }
+}
+
+/* Tooltip Styling (if needed) */
+.mapster_tooltip {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+}
